@@ -30,7 +30,7 @@
                                 <ul class="submenu" style="display:none;">
                                     @foreach (var son in item.SonFunction)
                                     {
-                                        if (son.CheckAuth.IsNullOrEmpty() && !MenuHelper.CheckMenuPermisson(son.SonFunctionId))
+                                        if (!son.CheckAuth.IsNullOrEmpty() && !MenuHelper.CheckMenuPermisson(son.SonFunctionId))
                                         {
                                             continue;
                                         }

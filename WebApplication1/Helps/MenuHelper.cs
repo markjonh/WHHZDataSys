@@ -20,7 +20,7 @@ namespace System
                 int len = MenuId.Length;
                 if (len == 1)
                 {
-                    return !string.IsNullOrEmpty(user.Menus.Where(p => p.Substring(0, len).Equals(MenuId)).FirstOrDefault());
+                    return !string.IsNullOrEmpty(user.Menus.Where(p => p.Equals(MenuId)).FirstOrDefault());
                 }
                 else
                 {

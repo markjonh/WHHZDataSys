@@ -11,6 +11,7 @@ using WebApplication1.Common;
 using WebApplication1.Model;
 using WebApplication1.Model.Dto;
 using Zhongyu.Data.Extensions;
+
 namespace WebApplication1.Models
 {
     public class DapperService
@@ -23,9 +24,11 @@ namespace WebApplication1.Models
             connection.Open();
             return connection;
         }
+
         public static class SqlHelp
         {
             #region 用户管理
+
             //获取所有用户
             public static List<UsersDto> GetUsers()
             {
@@ -33,7 +36,7 @@ namespace WebApplication1.Models
                 using (IDbConnection conn = MySqlConnection())
                 {
                     user = conn.Query<UsersDto>("select * from sysuser", commandType: CommandType.Text,
-                           commandTimeout: 0).ToList();
+                        commandTimeout: 0).ToList();
                 }
 
                 return user;
@@ -83,7 +86,7 @@ namespace WebApplication1.Models
                                 if (!string.IsNullOrWhiteSpace(rid))
                                 {
                                     conn.Execute("Insert into userrole values (@UserId,@RoleId)",
-                                        new UserRoles { RoleId = rid, UserId = model.Id });
+                                        new UserRoles {RoleId = rid, UserId = model.Id});
                                     //RoleUser.Insert(});
                                 }
                             }
@@ -154,7 +157,7 @@ namespace WebApplication1.Models
                                 if (!string.IsNullOrWhiteSpace(rid))
                                 {
                                     conn.Execute("Insert into userrole values (@UserId,@RoleId)",
-                                        new UserRoles { RoleId = rid, UserId = user.Id });
+                                        new UserRoles {RoleId = rid, UserId = user.Id});
 
                                 }
                             }
@@ -211,7 +214,7 @@ namespace WebApplication1.Models
                                 if (!string.IsNullOrWhiteSpace(rid))
                                 {
                                     conn.Execute("Insert into userrole values (@UserId,@RoleId)",
-                                        new UserRoles { RoleId = rid, UserId = user.Id });
+                                        new UserRoles {RoleId = rid, UserId = user.Id});
 
                                 }
                             }
@@ -266,13 +269,13 @@ namespace WebApplication1.Models
                     p.Add("@_DateTimeStart", model.StarTime);
                     p.Add("@_DateTimeEnd", model.EndTime);
                     p.Add("@_Area", model.Area);
-                    p.Add("@_figureno",model.FigureNo);
+                    p.Add("@_figureno", model.FigureNo);
                     // var list1= conn.Query("SP_Data_All_Barcode_QueryByDate", p, commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
-                   return  conn.Query<AssembleSearchDto>("SP_Data_All_Barcode_QueryByDate", p,
+                    return conn.Query<AssembleSearchDto>("SP_Data_All_Barcode_QueryByDate", p,
                         commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
                 }
 
-           
+
             }
 
             /// <summary>
@@ -332,22 +335,22 @@ namespace WebApplication1.Models
                     list.partlist = conn.Query<ResPartDto>("SP_ScanerRatepart", p,
                         commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
                     var tt = from left in list.assemlist
-                             join right in list.partlist
-                                 on left.Figure_No_up equals right.Figure_No
-                             select new ResScnRateDto
-                             {
-                                 Figure_No_up = left.Figure_No_up,
-                                 sum_up = left.sum_up,
-                                 upstation = left.upstation,
-                                 Figure_No_down = left.Figure_No_down,
-                                 sum_down = left.sum_down,
-                                 DOWNSTATION = left.DOWNSTATION,
-                                 DOWNRATE = Convert.ToString(left.DOWNRATE) + "%",
-                                 cartype = right.cartype,
-                                 Partname = right.Partname,
-                                 Part_Sum = right.Part_Sum,
-                                 PartFigureNo = right.PartFigureNo
-                             };
+                        join right in list.partlist
+                            on left.Figure_No_up equals right.Figure_No
+                        select new ResScnRateDto
+                        {
+                            Figure_No_up = left.Figure_No_up,
+                            sum_up = left.sum_up,
+                            upstation = left.upstation,
+                            Figure_No_down = left.Figure_No_down,
+                            sum_down = left.sum_down,
+                            DOWNSTATION = left.DOWNSTATION,
+                            DOWNRATE = Convert.ToString(left.DOWNRATE) + "%",
+                            cartype = right.cartype,
+                            Partname = right.Partname,
+                            Part_Sum = right.Part_Sum,
+                            PartFigureNo = right.PartFigureNo
+                        };
                     listend = tt.ToList();
 
                     foreach (var itmes in listend)
@@ -466,17 +469,17 @@ namespace WebApplication1.Models
             /// <returns></returns>
             public static List<QCSelectDto> QCSelect(QCSelectIndexModel model)
             {
-               
+
                 using (IDbConnection conn = MySqlConnection())
                 {
                     var p = new DynamicParameters();
                     p.Add("@_LINE", model.Area);
                     p.Add("@_DateTimeStart", model.StartTime);
                     p.Add("@_DateTimeEnd", model.EndTime);
-                   
-                   return  conn.Query<QCSelectDto>("SP_QC_PASS", p, commandType: CommandType.StoredProcedure,
-                            commandTimeout: 0).ToList();
-                   
+
+                    return conn.Query<QCSelectDto>("SP_QC_PASS", p, commandType: CommandType.StoredProcedure,
+                        commandTimeout: 0).ToList();
+
                 }
 
 
@@ -746,6 +749,7 @@ namespace WebApplication1.Models
                 return data;
             }
         }
+
         //角色服务类
         public static class Roles
         {
@@ -782,20 +786,36 @@ namespace WebApplication1.Models
                         commandTimeout: 0).FirstOrDefault();
                 }
             }
+
             //删除
             public static int Delete(string Id)
             {
-                // UsersDto users;
+                var s = 0;
                 using (IDbConnection conn = MySqlConnection())
                 {
+                    IDbTransaction transaction = conn.BeginTransaction();
+                    try
+                    {
+                        var p = new DynamicParameters();
+                        p.Add("@Id", Id);
 
-                    var p = new DynamicParameters();
-                    p.Add("@Id", Id);
-                    return conn.Execute("delete from role where Id=@Id", p);
+                        s = conn.Execute("delete from role where Id=@Id", p) +
+                            conn.Execute("delete from rolefunction where RoleId=@Id", p);
+
+                        transaction.Commit();
+
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                    }
                 }
-            }
 
+                return s;
+            }
         }
+
+
         //用户角色管理
         public static class RoleUser
         {
@@ -840,10 +860,11 @@ namespace WebApplication1.Models
 
                 }
 
-               
+
             }
 
         }
+
         //功能管理
         public static class Function
         {
@@ -852,10 +873,12 @@ namespace WebApplication1.Models
             {
                 using (IDbConnection conn = MySqlConnection())
                 {
-                    return conn.Query<ResFunctionDto>("select * from function", commandType: CommandType.Text,commandTimeout: 0).ToList();
+                    return conn.Query<ResFunctionDto>("select * from function", commandType: CommandType.Text,
+                        commandTimeout: 0).ToList();
                 }
             }
         }
+
         //子菜单功能管理
         public static class SonFunction
         {
@@ -863,9 +886,11 @@ namespace WebApplication1.Models
             {
                 using (IDbConnection conn = MySqlConnection())
                 {
-                    return conn.Query<SonFunctionDto>("select * from sonfunction", commandType: CommandType.Text, commandTimeout: 0).ToList();
+                    return conn.Query<SonFunctionDto>("select * from sonfunction", commandType: CommandType.Text,
+                        commandTimeout: 0).ToList();
                 }
             }
+
             public static SonFunctionDto GetById(string Id)
             {
                 try
@@ -874,8 +899,10 @@ namespace WebApplication1.Models
                     {
                         var p = new DynamicParameters();
                         p.Add("@Id", Id);
-                        var tt= conn.Query<SonFunctionDto>("select * from sonfunction where SonFunctionId=@Id",p,commandType: CommandType.Text, commandTimeout: 0).FirstOrDefault();
-                        return conn.Query<SonFunctionDto>("select * from sonfunction where SonFunctionId=@Id",p,commandType: CommandType.Text, commandTimeout: 0).FirstOrDefault();
+                        var tt = conn.Query<SonFunctionDto>("select * from sonfunction where SonFunctionId=@Id", p,
+                            commandType: CommandType.Text, commandTimeout: 0).FirstOrDefault();
+                        return conn.Query<SonFunctionDto>("select * from sonfunction where SonFunctionId=@Id", p,
+                            commandType: CommandType.Text, commandTimeout: 0).FirstOrDefault();
                     }
                 }
                 catch (Exception e)
@@ -883,10 +910,11 @@ namespace WebApplication1.Models
                     Console.WriteLine(e);
                     throw;
                 }
-               
+
             }
 
         }
+
         //角色权限管理
         public static class RoleFunction
         {
@@ -895,9 +923,11 @@ namespace WebApplication1.Models
             {
                 using (IDbConnection conn = MySqlConnection())
                 {
-                    return conn.Query<RoleFunctionDto>("select * from rolefunction", commandType: CommandType.Text, commandTimeout: 0).ToList();
+                    return conn.Query<RoleFunctionDto>("select * from rolefunction", commandType: CommandType.Text,
+                        commandTimeout: 0).ToList();
                 }
             }
+
             //新增
             public static int insert(RoleFunctionDto model)
             {
@@ -919,27 +949,31 @@ namespace WebApplication1.Models
                                     {
                                         if (rid.Length > 1)
                                         {
-                                            if(SonFunction.GetById(rid).FatherId!= fatherId){
-                                                conn.Execute("Insert into rolefunction values (@RoleId,@FunctionId)", new RoleFunctionDto
-                                                {
-                                                    RoleId = model.RoleId,
-                                                    FunctionID = SonFunction.GetById(rid).FatherId
-                                                });
+                                            if (SonFunction.GetById(rid).FatherId != fatherId)
+                                            {
+                                                conn.Execute("Insert into rolefunction values (@RoleId,@FunctionId)",
+                                                    new RoleFunctionDto
+                                                    {
+                                                        RoleId = model.RoleId,
+                                                        FunctionID = SonFunction.GetById(rid).FatherId
+                                                    });
                                                 fatherId = SonFunction.GetById(rid).FatherId;
                                             }
-                                            
+
                                         }
 
-                                        conn.Execute("Insert into rolefunction values (@RoleId,@FunctionId)", new RoleFunctionDto
-                                        {
-                                            RoleId = model.RoleId,
-                                            FunctionID = rid
-                                        });
+                                        conn.Execute("Insert into rolefunction values (@RoleId,@FunctionId)",
+                                            new RoleFunctionDto
+                                            {
+                                                RoleId = model.RoleId,
+                                                FunctionID = rid
+                                            });
                                         //RoleUser.Insert(});
                                     }
                                 }
                             }
                         }
+
                         transaction.Commit();
                     }
                     catch (Exception ex)
@@ -959,10 +993,11 @@ namespace WebApplication1.Models
                     var p = new DynamicParameters();
                     p.Add("@Id", id);
                     return conn.Execute("delete from rolefunction where RoleId=@Id", p);
-                   
+
                 }
             }
         }
+
         public static class SysUser
         {
             //获取当前用户
@@ -977,34 +1012,40 @@ namespace WebApplication1.Models
                 }
             }
 
-            public static int ChangePassword(string  uid, string password)
+            public static int ChangePassword(string uid, string password)
             {
                 using (IDbConnection conn = MySqlConnection())
                 {
                     SysUserDto item = GetById(uid);
                     item.Password = password;
-                    UsersDto user=new UsersDto(){Name = item.Name, Enable = item.Enable, Id = item.Id, Password = item.Password, LoginName = item.LoginName, Phone = item.Phone};
-               
+                    UsersDto user = new UsersDto()
+                    {
+                        Name = item.Name, Enable = item.Enable, Id = item.Id, Password = item.Password,
+                        LoginName = item.LoginName, Phone = item.Phone
+                    };
+
 
 
                     return conn.Execute(
                         "update sysuser set Id=@Id,LoginName=@LoginName,Password=@Password,Name=@Name,Phone=@Phone,Enable=@Enable where Id=@Id",
-                        user); 
+                        user);
                 }
-               
+
             }
 
         }
+
         //excel导出
         public static class ToExcel
         {
-           // 导出部件
-            public static  List<PartToExcelDto> PartToExcel(ToExcelModel model)
+            // 导出部件
+            public static List<PartToExcelDto> PartToExcel(ToExcelModel model)
             {
                 string str = "";
-                if (model.line== "Suspension")
+                if (model.line == "Suspension")
                 {
-                    str = @"SELECT  '前悬线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
+                    str =
+                        @"SELECT  '前悬线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
                         `AQ`.`END_Time` AS `UpLineTime`,
                         `DQ`.`part_figure_no` AS `PART_figure_no`,
                         `DQ`.`cartypeID` AS `cartype`, 
@@ -1019,9 +1060,11 @@ namespace WebApplication1.Models
                     LEFT JOIN rec_qx_barcodedata AS `BQ` ON(`BQ`.`ID`=`CQ`.`ID`)
                     LEFT JOIN STATION_SET_PART AS `DQ` ON(INSTR(BQ.BARCODE_PART, DQ.KEY))";
                 }
+
                 if (model.line == "SubFram")
                 {
-                    str = @"SELECT  '副车架线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
+                    str =
+                        @"SELECT  '副车架线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
                         `AQ`.`END_Time` AS `UpLineTime`,
                         `DQ`.`part_figure_no` AS `PART_figure_no`,
                         `DQ`.`cartypeID` AS `cartype`, 
@@ -1036,9 +1079,11 @@ namespace WebApplication1.Models
                     LEFT JOIN rec_fcj_barcodedata AS `BQ` ON(`BQ`.`ID`=`CQ`.`ID`)
                     LEFT JOIN STATION_SET_PART AS `DQ` ON(INSTR(BQ.BARCODE_PART, DQ.KEY))";
                 }
+
                 if (model.line == "RearAxle")
                 {
-                    str = @"SELECT  '后桥线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
+                    str =
+                        @"SELECT  '后桥线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
                         `AQ`.`END_Time` AS `UpLineTime`,
                         `DQ`.`part_figure_no` AS `PART_figure_no`,
                         `DQ`.`cartypeID` AS `cartype`, 
@@ -1053,9 +1098,11 @@ namespace WebApplication1.Models
                     LEFT JOIN rec_hq_barcodedata AS `BQ` ON(`BQ`.`ID`=`CQ`.`ID`)
                     LEFT JOIN STATION_SET_PART AS `DQ` ON(INSTR(BQ.BARCODE_PART, DQ.KEY))";
                 }
+
                 if (model.line == "RearAngle")
                 {
-                    str = @"SELECT  '后角线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
+                    str =
+                        @"SELECT  '后角线体' AS `ProductLine`,`AQ`.`Barcode_zc` AS `SN`,  '//' AS `ClampNumber`,`AQ`.`START_Time` AS `OnLineTime`,
                         `AQ`.`END_Time` AS `UpLineTime`,
                         `DQ`.`part_figure_no` AS `PART_figure_no`,
                         `DQ`.`cartypeID` AS `cartype`, 
@@ -1070,12 +1117,14 @@ namespace WebApplication1.Models
                     LEFT JOIN rec_hj_barcodedata AS `BQ` ON(`BQ`.`ID`=`CQ`.`ID`)
                     LEFT JOIN STATION_SET_PART AS `DQ` ON(INSTR(BQ.BARCODE_PART, DQ.KEY))";
                 }
+
                 using (IDbConnection conn = MySqlConnection())
                 {
                     var p = new DynamicParameters();
                     p.Add("@DateTimeStart", model.starttime);
                     p.Add("@DateTimeEnd", model.endtime);
-                    return conn.Query<PartToExcelDto>(str, p,commandType: CommandType.Text, commandTimeout: 240).ToList();
+                    return conn.Query<PartToExcelDto>(str, p, commandType: CommandType.Text, commandTimeout: 240)
+                        .ToList();
                 }
 
             }
@@ -1083,7 +1132,7 @@ namespace WebApplication1.Models
             public static List<TorqToExcelDto> TorqToExcel(ToExcelModel model)
             {
                 string str = "";
-                if (model.line== "Suspension")
+                if (model.line == "Suspension")
                 {
 
 
@@ -1110,7 +1159,8 @@ namespace WebApplication1.Models
 
 
                 }
-                if (model.line== "SubFram")
+
+                if (model.line == "SubFram")
                 {
                     str = @"SELECT 
                         '副车架线体'  AS `ProductLine`,
@@ -1134,6 +1184,7 @@ namespace WebApplication1.Models
 
                     LEFT JOIN `list_stations` AS `EQ` ON(`EQ`.`ID`=`CQ`.`StationID`) ";
                 }
+
                 if (model.line == "RearAxle")
                 {
                     str = @"SELECT 
@@ -1158,6 +1209,7 @@ namespace WebApplication1.Models
 
                     LEFT JOIN `list_stations` AS `EQ` ON(`EQ`.`ID`=`CQ`.`StationID`) ";
                 }
+
                 if (model.line == "RearAngle")
                 {
                     str = @"SELECT 
@@ -1183,34 +1235,39 @@ namespace WebApplication1.Models
 
                     LEFT JOIN `list_stations` AS `EQ` ON(`EQ`.`ID`=`CQ`.`StationID`)";
                 }
+
                 using (IDbConnection conn = MySqlConnection())
                 {
                     var p = new DynamicParameters();
                     p.Add("@DateTimeStart", model.starttime);
                     p.Add("@DateTimeEnd", model.endtime);
-                    return conn.Query<TorqToExcelDto>(str, p, commandType: CommandType.Text, commandTimeout: 240).Where(p1 => p1.QualityStatus != null && p1.Nutname != null && p1.NutID != null&&p1.Station!=null).ToList();
+                    return conn.Query<TorqToExcelDto>(str, p, commandType: CommandType.Text, commandTimeout: 240)
+                        .Where(p1 =>
+                            p1.QualityStatus != null && p1.Nutname != null && p1.NutID != null && p1.Station != null)
+                        .ToList();
                 }
             }
         }
 
         public static class AssemblySearch
         {
-            public static List<string>GetNum(DateTime start,DateTime end,string line)
+            public static List<string> GetNum(DateTime start, DateTime end, string line)
             {
-                
+
                 using (IDbConnection conn = MySqlConnection())
                 {
                     var p = new DynamicParameters();
                     p.Add("@_DateTimeStart", start);
-                    p.Add("@_DateTimeEnd",end);
+                    p.Add("@_DateTimeEnd", end);
                     p.Add("@_Area", line);
 
-                   return conn.Query<string>("SP_ZcFigureNo", p,
+                    return conn.Query<string>("SP_ZcFigureNo", p,
                         commandType: CommandType.StoredProcedure).ToList();
                 }
 
-               
+
             }
         }
     }
 }
+
